@@ -3,7 +3,7 @@
 
 
 /* keep in sync with `node.h` error enums */
-const char *node_error_strings[] = {
+static const char *node_error_strings[] = {
   "success",
   "failure",
   "bad inlet",
