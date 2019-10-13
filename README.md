@@ -32,7 +32,7 @@ aq demo
 
 
 ## Building
-If you don't intend to modify the project you can download binaries for Linux and Windows from the [releases](releases) page and avoid building it yourself.
+If you don't intend to modify the project you can download binaries for Linux and Windows from the [releases](https://github.com/rxi/aq/releases) page and avoid building it yourself.
 
 The project can be built on Linux for both Linux and Windows. The
 `build.py` script should be used to build the project. To perform a release build, run the following:
