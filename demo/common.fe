@@ -1,0 +1,256 @@
+
+
+(= macro (mac (sym params . body)
+  (list '= sym
+    (cons 'mac (cons params body))
+  )
+))
+
+(macro func (sym params . body)
+  (list '= sym
+    (cons 'fn (cons params body))
+  )
+)
+
+(macro when (x . body)
+  (list 'if x (cons 'do body))
+)
+
+(macro unless (x . body)
+  (cons 'when (cons (list 'not x) body))
+)
+
+(macro until (x . body)
+  (cons 'while (cons (list 'not x) body))
+)
+
+(macro zap (sym f)
+  (list '= sym (list f sym))
+)
+
+(macro par args
+  (list 'fn '(_)
+    (if (has '_ args)
+      args
+      (concat args '(_))
+    )
+  )
+)
+
+(macro -> (init . forms)
+  (concat
+    (list 'do (list 'let '_ init))
+    (map
+      (fn (x) (list '= '_ (if
+        (atom x) (list x '_)
+        (has '_ x) x
+        (concat x '(_))
+      )))
+      forms
+    )
+    '(_)
+  )
+)
+
+(macro for (item lst . body)
+  (list 'do
+    (list 'let 'for-iter lst)
+    (list 'while 'for-iter
+      (list 'let item '(car for-iter))
+      (cons 'do body)
+      '(zap for-iter cdr)
+    )
+  )
+)
+
+(macro case (val . forms)
+  (let res nil)
+  (while forms
+    (push (list 'is val (car forms)) res)
+    (push (car (cdr forms)) res)
+    (= forms (cdr (cdr forms)))
+  )
+  (cons 'if (rev res))
+)
+
+(macro ++ (x n)
+  (list '= x (list '+ x (or n 1)))
+)
+
+(macro -- (x n)
+  (list '= x (list '- x (or n 1)))
+)
+
+(macro push (val lst)
+  (list '= lst (list 'cons val lst))
+)
+
+(macro pop (lst)
+  (list 'do
+    (list 'let 'pop-val (list 'car lst))
+    (list '= lst (list 'cdr lst))
+    'pop-val
+  )
+)
+
+(func abs (n)
+  (if (< n 0) (- 0 n) n)
+)
+
+(func rev (lst)
+  (let res nil)
+  (while lst
+    (push (car lst) res)
+    (zap lst cdr)
+  )
+  res
+)
+
+(func len (lst)
+  (let n 0)
+  (while lst
+    (zap lst cdr)
+    (++ n)
+  )
+  n
+)
+
+(func nthcdr (n lst)
+  (while (< 0 n)
+    (zap lst cdr)
+    (-- n)
+  )
+  lst
+)
+
+(func nth (n lst)
+  (car (nthcdr n lst))
+)
+
+(func findcdr (f lst)
+  (let res nil)
+  (while lst
+    (when (f (car lst))
+      (= res lst)
+      (= lst nil)
+    )
+    (zap lst cdr)
+  )
+  res
+)
+
+(func find (f lst)
+  (car (findcdr f lst))
+)
+
+(func has (x lst)
+  (let res nil)
+  (while lst
+    (when (is (car lst) x)
+      (= lst nil)
+      (= res t)
+    )
+    (zap lst cdr)
+  )
+  res
+)
+
+(func each (f lst)
+  (while lst
+    (f (car lst))
+    (zap lst cdr)
+  )
+)
+
+(func map (f lst)
+  (let res nil)
+  (while lst
+    (push (f (car lst)) res)
+    (zap lst cdr)
+  )
+  (rev res)
+)
+
+(func filter (f lst)
+  (let res nil)
+  (while lst
+    (if (f (car lst)) (push (car lst) res))
+    (zap lst cdr)
+  )
+  (rev res)
+)
+
+(func reject (f lst)
+  (filter (par not (f _)) lst)
+)
+
+(func reduce (f lst)
+  (let res (car lst))
+  (zap lst cdr)
+  (while lst
+    (= res (f res (car lst)))
+    (zap lst cdr)
+  )
+  res
+)
+
+(func range (n)
+  (let res nil)
+  (while (< 0 n)
+    (-- n)
+    (push n res)
+  )
+  res
+)
+
+(func concat args
+  (let res nil)
+  (for x args
+    (for y x (push y res))
+  )
+  (rev res)
+)
+
+(func take (n lst)
+  (let res nil)
+  (while (and lst (< 0 n))
+    (push (car lst) res)
+    (zap lst cdr)
+    (-- n)
+  )
+  res
+)
+
+(func assoc (key lst)
+  (let res nil)
+  (while lst
+    (when (is (car (car lst)) key)
+      (= res (car lst))
+      (= lst nil)
+    )
+    (zap lst cdr)
+  )
+  res
+)
+
+(func alist args
+  (let res nil)
+  (while args
+    (push (cons (car args) (car (cdr args))) res)
+    (= args (cdr (cdr args)))
+  )
+  (rev res)
+)
+
+(func << (key lst)
+  (cdr (assoc key lst))
+)
+
+(func >> (key val lst)
+  (setcdr (assoc key lst) val)
+)
+
+(func azap (key f lst)
+  (let pair (assoc key lst))
+  (setcdr pair (f (cdr pair)))
+)

@@ -1,0 +1,51 @@
+
+
+(macro ui:column body
+  (concat
+    '(do)
+    '((ui:begin-column))
+    body
+    '((ui:end-column))
+  )
+)
+
+
+(macro ui:with-id (id . body)
+  (concat
+    '(do)
+    (list (list 'ui:push-id id))
+    body
+    '((ui:pop-id))
+  )
+)
+
+
+(macro ui:slider2 (sym . args)
+  (let call (list 'ui:slider (list 'quote sym) sym))
+  (list '= sym (concat call args))
+)
+
+
+(macro ui:slider3 (sym . args)
+  (cons 'do (list
+    '(ui:begin-column)
+    '(ui:row '(46 -1))
+    (list 'ui:label (string sym ":"))
+    (cons 'ui:slider2 (cons sym args))
+    '(ui:end-column)
+  ))
+)
+
+
+(func ui:unlabeled-button (id)
+  (let res nil)
+  (ui:with-id id
+    (= res (ui:button ""))
+  )
+  res
+)
+
+
+(func ui:selected ()
+  (if (is (mod frame-count 2) 0) (ui:highlight))
+)

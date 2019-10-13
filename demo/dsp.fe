@@ -1,0 +1,40 @@
+
+
+(func dsp:chain nodes
+  (let n nodes)
+  (while (cdr n)
+    (dsp:link (car n) 'out (car (cdr n)) 'in)
+    (zap n cdr)
+  )
+)
+
+
+(macro dsp:group body
+  (concat
+    '(do)
+    '(
+      (let dsp:group/res nil)
+      (let dsp:group/new dsp:new)
+      (func dsp:new (name)
+        (let node (dsp:group/new name))
+        (push node dsp:group/res)
+        node
+      )
+    )
+    body
+    '(
+      (= dsp:new dsp:group/new)
+      dsp:group/res
+    )
+  )
+)
+
+
+(func mtof (n)
+  (* (pow 2 (/ (- n 69) 12)) 440)
+)
+
+
+(func bpm-to-seconds (bpm)
+  (/ 120 8 bpm)
+)

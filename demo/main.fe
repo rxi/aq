@@ -1,0 +1,405 @@
+(do-file "common.fe")
+(do-file "ui.fe")
+(do-file "dsp.fe")
+
+
+;; master
+(do
+  (= outputs nil)
+  (= bpm 120)
+  (= dac (dsp:new 'dac))
+
+  (= master (dsp:new 'math))
+  (dsp:link master 'out dac 'left)
+  (dsp:link master 'out dac 'right)
+
+  (= pre-reverb (dsp:new 'math))
+  (= reverb (dsp:new 'reverb))
+  (dsp:link pre-reverb 'out reverb 'left)
+  (dsp:link pre-reverb 'out reverb 'right)
+  (dsp:link reverb 'left dac 'left)
+  (dsp:link reverb 'right dac 'right)
+
+  (= delay (dsp:new 'delay))
+  (dsp:link delay 'out dac 'left)
+  (dsp:link delay 'out dac 'right)
+
+  (let delay-time 3)
+  (let feedback 0.6)
+
+  (func render-master-delay ()
+    (ui:row '(40 -1))
+    (ui:label "Delay") (ui:meter (abs (dsp:get delay 'out)))
+    (ui:row '(46 33 33 33 33 33 33))
+    (ui:label "time:")
+    (for i (range 6)
+      (++ i)
+      (if (ui:button i) (= delay-time i))
+      (if (is i delay-time) (ui:selected))
+    )
+    (ui:row '(-1))
+    (ui:slider3 feedback)
+    (ui:row '(-1) 12)
+    (ui:label "")
+    (dsp:set delay 'feedback feedback)
+    (dsp:set delay 'time (* (bpm-to-seconds bpm) delay-time))
+  )
+
+  (let size  0.9)
+  (let damp  0.5)
+  (let width 1.0)
+
+  (func render-master-reverb ()
+    (ui:row '(40 -1))
+    (ui:label "Reverb") (ui:meter (abs (dsp:get reverb 'left)))
+    (ui:row '(-1))
+    (ui:slider3 size)
+    (ui:slider3 damp)
+    (ui:slider3 width)
+    (ui:label "")
+    (dsp:send reverb (string "roomsize " size))
+    (dsp:send reverb (string "damp " damp))
+    (dsp:send reverb (string "width " width))
+  )
+
+  (func render-master ()
+    (ui:row '(40 -1))
+    (ui:label "Master") (ui:meter (abs (dsp:get master 'out)))
+    (ui:row '(46 -1))
+    (ui:label "bpm:") (= bpm (ui:number "bpm" bpm))
+    (ui:row '(-1) 8)
+    (ui:label "")
+    (dsp:set-tick (bpm-to-seconds bpm))
+  )
+)
+
+
+(func make-drum (name)
+  (let osc (dsp:new 'osc))
+  (let osc-freq (dsp:new 'math))
+  (let osc-env (dsp:new 'line))
+  (dsp:link osc-env 'out osc-freq 'in)
+  (dsp:link osc-freq 'out osc 'freq)
+  (dsp:send osc-freq "set in ^ 4 * 14000 + in2")
+
+  (let noise (dsp:new 'osc))
+  (let noise-amp (dsp:new 'math))
+  (dsp:send noise "mode noise")
+  (dsp:send noise-amp "set in2 ^ 3 * in")
+
+  (let amp (dsp:new 'math))
+  (let amp-env (dsp:new 'line))
+  (dsp:send amp "set in2 ^ 3 * in")
+  (dsp:link amp-env 'out amp 'in2)
+  (push amp outputs)
+
+  (let reverb-send (dsp:new 'math))
+  (dsp:send reverb-send "set in2 ^ 3 * in")
+  (dsp:chain amp reverb-send pre-reverb)
+
+  (let delay-send (dsp:new 'math))
+  (dsp:send delay-send "set in2 ^ 3 * in")
+  (dsp:chain amp delay-send delay)
+
+  (dsp:chain osc amp master)
+  (dsp:chain noise noise-amp amp)
+
+  (let gain   0.70)
+  (let adecay 0.50)
+  (let freq   0.10)
+  (let oenv   0.25)
+  (let odecay 0.50)
+  (let namp   0.00)
+  (let reverb 0.30)
+  (let delay  0.30)
+
+  (fn (cmd arg1 arg2)
+    (case cmd
+      'trigger (do
+        (let g (* gain (if arg2 1.3 1)))
+        (dsp:send amp-env (string "begin " g " 0.005 0 " (* (pow adecay 4) 8)))
+        (dsp:send osc-env (string "begin " oenv " 0.005 0 " (* (pow odecay 4) 8)))
+      )
+      'render (ui:with-id name
+        (ui:row '(40 -1))
+        (ui:label name) (ui:meter (dsp:get amp-env 'out))
+        (ui:row '(130 -1))
+        (ui:slider3 gain)
+        (ui:slider3 adecay)
+        (ui:slider3 freq)
+        (ui:slider3 oenv)
+        (ui:slider3 odecay)
+        (ui:slider3 namp)
+        (ui:slider3 reverb)
+        (ui:slider3 delay)
+        (ui:label "")
+        (dsp:set reverb-send 'in2 reverb)
+        (dsp:set delay-send 'in2 delay)
+        (dsp:set osc-freq 'in2 (+ 30 (* (pow freq 3) 400)))
+        (dsp:set noise-amp 'in2 namp)
+      )
+    )
+  )
+)
+
+
+(func make-bass (name base-cc)
+  (let osc (dsp:new 'osc))
+  (let osc-freq (dsp:new 'line))
+  (dsp:send osc "mode saw")
+  (dsp:link osc-freq 'out osc 'freq)
+
+  (let amp (dsp:new 'math))
+  (let amp-env (dsp:new 'line))
+  (dsp:send amp "set in2 ^ 3 * in")
+  (dsp:link amp-env 'out amp 'in2)
+  (push amp outputs)
+
+  (let filter (dsp:new 'svf))
+  (let filter-freq (dsp:new 'math))
+  (let filter-env (dsp:new 'line))
+  (dsp:send filter-freq "set in + in2 ^ 5 * 16000 + 30")
+  (dsp:link filter-freq 'out filter 'freq)
+  (dsp:link filter-env 'out filter-freq 'in)
+
+  (let reverb-send (dsp:new 'math))
+  (dsp:send reverb-send "set in2 ^ 3 * in")
+  (dsp:chain amp reverb-send pre-reverb)
+
+  (let delay-send (dsp:new 'math))
+  (dsp:send delay-send "set in2 ^ 3 * in")
+  (dsp:chain amp delay-send delay)
+
+  (dsp:chain osc filter amp master)
+
+  (let gain   0.7)
+  (let adecay 0.5)
+  (let cutoff 0.1)
+  (let res    0.3)
+  (let fdecay 0.5)
+  (let fenv   0.4)
+  (let reverb 0.3)
+  (let delay  0.3)
+
+  (fn (cmd arg1 arg2)
+    (case cmd
+      'trigger (do
+        (dsp:send osc-freq (string "begin " (mtof arg1) " " (if arg2 0.1 0)))
+        (dsp:send amp-env (string "begin " gain " 0.005 0 " (* (pow adecay 4) 8)))
+        (dsp:send filter-env (string "begin " fenv " 0.005 0 " (* (pow fdecay 4) 8)))
+        (dsp:set filter 'q (* 30 (pow res 5)))
+      )
+      'render (ui:with-id name
+        (ui:row '(40 -1))
+        (ui:label name) (ui:meter (dsp:get amp-env 'out))
+        (ui:row '(130 -1))
+        (ui:slider3 gain)
+        (ui:slider3 adecay)
+        (ui:slider3 cutoff)
+        (ui:slider3 res)
+        (ui:slider3 fdecay)
+        (ui:slider3 fenv)
+        (ui:slider3 reverb)
+        (ui:slider3 delay)
+        (ui:label "")
+        (dsp:set filter-freq 'in2 cutoff)
+        (dsp:set reverb-send 'in2 reverb)
+        (dsp:set delay-send 'in2 delay)
+      )
+      'cc (do
+        (let val (/ arg2 127))
+        (case arg1
+          (+ base-cc 0) (= cutoff val)
+          (+ base-cc 1) (= res    val)
+          (+ base-cc 2) (= fdecay val)
+          (+ base-cc 3) (= fenv   val)
+        )
+      )
+    )
+  )
+)
+
+
+(func render-step (step i active)
+  (let val (car step))
+  (let abs-val (and val (abs val)))
+  (ui:with-id i (ui:column
+    (ui:row '(-1) -13)
+    ;; main step button
+    (let label (if val abs-val ""))
+    (when (ui:button label)
+      (= val (if val nil last-selected-note))
+      (= selected-step step)
+    )
+    (if
+      active (ui:highlight)
+      (is step selected-step) (ui:selected)
+    )
+    ;; accent
+    (ui:row '(-1) -1)
+    (when (ui:unlabeled-button "accent")
+      (= val (or val last-selected-note))
+      (= val (- 0 val))
+    )
+    (if (and val (< val 0)) (ui:highlight))
+  ))
+  (setcar step val)
+)
+
+
+(func render-pattern (id ptn)
+  (ui:with-id id
+    (let count (len ptn))
+    (let step (mod tick-count count))
+    (let sz 30)
+    (ui:row (list sz sz sz sz sz sz sz sz) (+ sz 9))
+    (let i 0)
+    (let x ptn)
+    (while x
+      (render-step x i (is i step))
+      (zap x cdr)
+      (++ i)
+    )
+    (ui:row '(-1) 12)
+    (ui:label "")
+  )
+)
+
+
+(func render-pattern-set (id set)
+  (ui:with-id id
+    (ui:row '(18 200))
+    (ui:column
+      (ui:row '(-1) 18)
+      (for i (range (- (len set) 1))
+        (++ i)
+        (if (ui:button i) (setcar set i))
+        (if (is (car set) i) (ui:selected))
+      )
+    )
+    (ui:column
+      (render-pattern id (nth (car set) set))
+    )
+  )
+)
+
+
+(func tick-pattern (ptn voice)
+  (let n (mod tick-count (len ptn)))
+  (let step (nth n ptn))
+  (when step (voice 'trigger (abs step) (< step 0)))
+)
+
+
+(func tick-pattern-set (set voice)
+  (tick-pattern (nth (car set) set) voice)
+)
+
+
+(func render-note-select ()
+  (ui:column
+    (ui:row '(66 -1))
+    (ui:label "Note Select:")
+    (if (car selected-step) (do
+      (let sign (if (< (car selected-step) 0) -1 1))
+      (let n (ui:number "selected-step" (abs (car selected-step))))
+      (if (ui:key-pressed 'up  ) (++ n))
+      (if (ui:key-pressed 'down) (-- n))
+      (setcar selected-step (* sign n))
+      (= last-selected-note n)
+    ) (do
+      (ui:meter 0)
+    ))
+  )
+)
+
+
+(func make-pattern-set (patterns steps)
+  (cons
+    1
+    (map
+      (fn () (map (fn () nil) (range steps)))
+      (range patterns)
+    )
+  )
+)
+
+
+(= last-selected-note 60)
+(= selected-step (cons 60 nil))
+(= tick-count 0)
+(= frame-count 0)
+
+(= seq (map (par make-pattern-set 4 16) (range 6)))
+(= voice1 (make-bass "Synth1" 1))
+(= voice2 (make-bass "Synth2" 5))
+(= voice3 (make-drum "Drum1"))
+(= voice4 (make-drum "Drum2"))
+(= voice5 (make-drum "Drum3"))
+(= voice6 (make-drum "Drum4"))
+
+(zap outputs rev)
+(dsp:set-tick 0.12)
+
+(func on-frame ()
+  (ui:row '(290 16 268))
+
+  (ui:column
+    (let i 0)
+    (for set seq
+      (render-pattern-set (string "seq" i) set)
+      (++ i)
+    )
+    (ui:row '(-1))
+    (render-note-select)
+  )
+  (ui:label "")
+
+  (ui:column
+    (ui:row '(268 16 268))
+    (ui:column
+      (ui:row '(-1))
+      (voice1 'render)
+      (voice3 'render)
+      (voice5 'render)
+      (render-master-reverb)
+      (ui:row '(-1) 20)
+      (render-master)
+    )
+    (ui:label "")
+    (ui:column
+      (ui:row '(-1))
+      (voice2 'render)
+      (voice4 'render)
+      (voice6 'render)
+      (render-master-delay)
+      (ui:row '(87 87 -1) 54)
+      (for output outputs (ui:scope output 'out))
+    )
+  )
+
+  (when (ui:key-pressed "f5") (write "save" seq))
+  (when (ui:key-pressed "f9") (= seq (read "save")))
+
+  (++ frame-count)
+)
+
+
+(func on-tick ()
+  (tick-pattern-set (nth 0 seq) voice1)
+  (tick-pattern-set (nth 1 seq) voice2)
+  (tick-pattern-set (nth 2 seq) voice3)
+  (tick-pattern-set (nth 3 seq) voice4)
+  (tick-pattern-set (nth 4 seq) voice5)
+  (tick-pattern-set (nth 5 seq) voice6)
+  (++ tick-count)
+)
+
+
+(func on-midi (type chan arg1 arg2)
+  ; (echo "midi : " type " [" chan "] " arg1 ", " arg2)
+  (when (is type 'cc)
+    (voice1 'cc arg1 arg2)
+    (voice2 'cc arg1 arg2)
+  )
+)
