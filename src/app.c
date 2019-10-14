@@ -164,6 +164,13 @@ static void process_frame(mu_Context *ctx) {
   win.rect.y = (h - win.rect.h) / 2;
 
   console_window(ctx);
+
+  /* fullscreen toggle */
+  if (ui_key_pressed("f11")) {
+    static bool fullscreen = false;
+    fullscreen ^= true;
+    r_set_fullscreen(fullscreen);
+  }
 }
 
 

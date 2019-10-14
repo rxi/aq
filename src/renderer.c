@@ -134,6 +134,11 @@ void r_set_size(int w, int h) {
 }
 
 
+void r_set_fullscreen(bool fullscreen) {
+  SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+}
+
+
 void r_draw_rect(mu_Rect rect, mu_Color color) {
   push_quad(rect, atlas[ATLAS_WHITE], color);
 }
