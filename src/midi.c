@@ -114,6 +114,8 @@ static void midi_platform_send(MidiMessage msg) {
 
 #include <windows.h>
 
+static HMIDIOUT midi_outputs[32];
+
 static void CALLBACK midi_input_callback(HMIDIIN hMidiIn, UINT wMsg,
   DWORD dwInstance, DWORD dwParam1, DWORD dwParam2)
 {
@@ -126,19 +128,30 @@ static void CALLBACK midi_input_callback(HMIDIIN hMidiIn, UINT wMsg,
 
 
 static void midi_platform_init(void) {
-  int n = midiInGetNumDevs();
-
   /* init all midi in devices */
+  int n = midiInGetNumDevs();
   for (int i = 0; i < n; i++) {
     HMIDIIN dev = NULL;
     int res = midiInOpen(&dev, i, (DWORD_PTR) midi_input_callback, i, CALLBACK_FUNCTION);
     expect(res == MMSYSERR_NOERROR);
     midiInStart(dev);
   }
+
+  /* init all midi out devices */
+  n = midiOutGetNumDevs();
+  for (int i = 0; i < n; i++) {
+    HMIDIOUT dev;
+    int res = midiOutOpen(&dev, i, 0, 0, CALLBACK_NULL);
+    expect(res == MMSYSERR_NOERROR);
+    midi_outputs[i] = dev;
+  }
 }
 
+
 static void midi_platform_send(MidiMessage msg) {
-  /* TODO */
+  for (int i = 0; midi_outputs[i]; i++) {
+    midiOutShortMsg(midi_outputs[i], *((DWORD*) &msg));
+  }
 }
 
 #endif
