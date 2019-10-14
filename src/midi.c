@@ -5,11 +5,17 @@
 MidiMessageFn midi_callback;
 
 static void midi_platform_init(void);
+static void midi_platform_send(MidiMessage msg);
 
 
 void midi_init(MidiMessageFn fn) {
   midi_callback = fn;
   midi_platform_init();
+}
+
+
+void midi_send(MidiMessage msg) {
+  midi_platform_send(msg);
 }
 
 
@@ -30,6 +36,7 @@ static const int sizes[] = {
 
 typedef struct { FILE *fp; int fd; } MidiInput;
 static MidiInput midi_inputs[16];
+static FILE *midi_outputs[16];
 
 
 static int midi_thread(void *udata) {
@@ -54,7 +61,7 @@ static int midi_thread(void *udata) {
         /* read midi message */
         MidiMessage msg;
         msg.b[0] = fgetc(mi.fp);
-        int n = sizes[msg.b[0]];
+        int n = sizes[midi_type(msg)];
         for (int i = 1; i < n; i++) {
           msg.b[i] = fgetc(mi.fp);
         }
@@ -68,9 +75,10 @@ static int midi_thread(void *udata) {
 
 
 static void midi_platform_init(void) {
+  char filename[32];
+
   /* find and open inputs */
   for (int i = 1; i < 16; i++) {
-    char filename[32];
     sprintf(filename, "/dev/midi%d", i);
     FILE *fp = fopen(filename, "rb");
     if (fp) {
@@ -78,8 +86,24 @@ static void midi_platform_init(void) {
     }
   }
 
+  /* find and open outputs */
+  for (int i = 1; i < 16; i++) {
+    sprintf(filename, "/dev/midi%d", i);
+    FILE *fp = fopen(filename, "wb");
+    if (fp) { midi_outputs[i - 1] = fp; }
+  }
+
   /* init input thread */
   SDL_CreateThread(midi_thread, "Midi Input", NULL);
+}
+
+
+static void midi_platform_send(MidiMessage msg) {
+  int sz = sizes[midi_type(msg)];
+  for (int i = 0; midi_outputs[i]; i++) {
+    fwrite(&msg, sz, 1, midi_outputs[i]);
+    fflush(midi_outputs[i]);
+  }
 }
 
 #endif
@@ -104,13 +128,17 @@ static void CALLBACK midi_input_callback(HMIDIIN hMidiIn, UINT wMsg,
 static void midi_platform_init(void) {
   int n = midiInGetNumDevs();
 
-  /* init all midi devices */
+  /* init all midi in devices */
   for (int i = 0; i < n; i++) {
     HMIDIIN dev = NULL;
     int res = midiInOpen(&dev, i, (DWORD_PTR) midi_input_callback, i, CALLBACK_FUNCTION);
     expect(res == MMSYSERR_NOERROR);
     midiInStart(dev);
   }
+}
+
+static void midi_platform_send(MidiMessage msg) {
+  /* TODO */
 }
 
 #endif

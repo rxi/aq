@@ -1,5 +1,6 @@
 #include <math.h>
 #include <SDL2/SDL.h>
+#include "midi.h"
 #include "fex.h"
 #include "app.h"
 
@@ -111,18 +112,37 @@ static fe_Object* f_do_file(fe_Context *ctx, fe_Object *arg) {
 }
 
 
+static fe_Object* f_send_midi(fe_Context *ctx, fe_Object *arg) {
+  const char* type_strings[] = { "note-on", "note-off", "cc", NULL };
+  const int types[] = { MIDI_NOTEON, MIDI_NOTEOFF, MIDI_CONTROLCHANGE };
+  MidiMessage msg;
+  char type[32];
+  fe_tostring(ctx, fe_nextarg(ctx, &arg), type, sizeof(type));
+  int chan = fe_tonumber(ctx, fe_nextarg(ctx, &arg));
+  msg.b[1] = fe_tonumber(ctx, fe_nextarg(ctx, &arg));
+  msg.b[2] = fe_tonumber(ctx, fe_nextarg(ctx, &arg));
+  int idx = string_to_enum(type_strings, type);
+  if (idx < 0) { fe_error(ctx, "invalid midi type"); }
+  msg.status = types[idx] | chan;
+  midi_send(msg);
+  return fe_bool(ctx, false);
+}
+
+
+
 fex_Reg api_core[] = {
-  { "exit",     f_exit      },
-  { "echo",     f_echo      },
-  { "error",    f_error     },
-  { "clock",    f_clock     },
-  { "rand",     f_rand      },
-  { "floor",    f_floor     },
-  { "mod",      f_mod       },
-  { "pow",      f_pow       },
-  { "string",   f_string    },
-  { "read",     f_read      },
-  { "write",    f_write     },
-  { "do-file",  f_do_file   },
+  { "exit",      f_exit      },
+  { "echo",      f_echo      },
+  { "error",     f_error     },
+  { "clock",     f_clock     },
+  { "rand",      f_rand      },
+  { "floor",     f_floor     },
+  { "mod",       f_mod       },
+  { "pow",       f_pow       },
+  { "string",    f_string    },
+  { "read",      f_read      },
+  { "write",     f_write     },
+  { "do-file",   f_do_file   },
+  { "send-midi", f_send_midi },
   {},
 };

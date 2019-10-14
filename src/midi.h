@@ -49,6 +49,6 @@ static inline int midi_channel(MidiMessage msg) {
 }
 
 void midi_init(MidiMessageFn fn);
-
+void midi_send(MidiMessage msg);
 
 #endif
