@@ -10,7 +10,7 @@ static int max_node;
 static FILE *stream_fp;
 
 static DspTickFn tick_callback;
-static double tick_interval = 1;
+static double tick_interval = 0.125;
 static double tick_timer;
 
 static SDL_mutex *lock;
