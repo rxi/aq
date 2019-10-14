@@ -139,11 +139,11 @@ static void midi_platform_init(void) {
 
   /* init all midi out devices */
   n = midiOutGetNumDevs();
-  for (int i = 0; i < n; i++) {
+  for (int i = 1; i < n; i++) {
     HMIDIOUT dev;
     int res = midiOutOpen(&dev, i, 0, 0, CALLBACK_NULL);
     expect(res == MMSYSERR_NOERROR);
-    midi_outputs[i] = dev;
+    midi_outputs[i - 1] = dev;
   }
 }
 
