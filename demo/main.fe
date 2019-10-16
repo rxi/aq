@@ -267,18 +267,41 @@
 
 
 (func render-pattern-set (id set)
-  (ui:with-id id
-    (ui:row '(18 200))
+  (ui:with-id (string "set" id)
+    (let ptncdr (nthcdr (car set) set))
+    (ui:row '(6 18 268 14) 83)
+    ;; select
+    (when (ui:unlabeled-button "select")
+      (= selected-set id)
+    )
+    (if (is selected-set id) (ui:selected))
+    ;; pattern selectors
     (ui:column
       (ui:row '(-1) 18)
       (for i (range (- (len set) 1))
         (++ i)
-        (if (ui:button i) (setcar set i))
+        (if (or (ui:button i) (and (is selected-set id) (ui:key-pressed i)))
+          (setcar set i)
+        )
         (if (is (car set) i) (ui:selected))
       )
     )
+    ;; pattern
     (ui:column
-      (render-pattern id (nth (car set) set))
+      (render-pattern id (car ptncdr))
+    )
+    ;; copy / paste / clear
+    (ui:column
+      (ui:row '(-1) 25)
+      (when (ui:button "C") ; copy
+        (= copied-pattern (concat (car ptncdr)))
+      )
+      (when (and (ui:button "P") copied-pattern) ; paste
+        (setcar ptncdr (concat copied-pattern))
+      )
+      (when (ui:button "X") ; clear
+        (setcar ptncdr (map (fn ()) (car ptncdr)))
+      )
     )
   )
 )
@@ -315,16 +338,14 @@
 
 
 (func make-pattern-set (patterns steps)
-  (cons
-    1
-    (map
-      (fn () (map (fn () nil) (range steps)))
-      (range patterns)
-    )
-  )
+  (cons 1 (map
+    (fn () (map (fn () nil) (range steps)))
+    (range patterns)
+  ))
 )
 
-
+(= selected-set 0)
+(= copied-pattern nil)
 (= last-selected-note 60)
 (= selected-step (cons 60 nil))
 (= tick-count 0)
@@ -342,12 +363,12 @@
 (dsp:set-tick 0.12)
 
 (func on-frame ()
-  (ui:row '(290 16 268))
+  (ui:row '(318 16 0))
 
   (ui:column
     (let i 0)
     (for set seq
-      (render-pattern-set (string "seq" i) set)
+      (render-pattern-set i set)
       (++ i)
     )
     (ui:row '(-1))
@@ -376,6 +397,12 @@
       (ui:row '(87 87 -1) 54)
       (for output outputs (ui:scope output 'out))
     )
+  )
+
+  (let i 0)
+  (for k '(q w e r t y)
+    (if (ui:key-pressed k) (= selected-set i))
+    (++ i)
   )
 
   (when (ui:key-pressed "f5") (write "save" seq))
