@@ -8,6 +8,7 @@ static Node *nodes[MAX_NODES];
 static int max_node;
 
 static FILE *stream_fp;
+static SDL_mutex *stream_lock;
 
 static DspTickFn tick_callback;
 static double tick_interval = 0.125;
@@ -132,14 +133,17 @@ static void process(float *buf, int len) {
 
 
 static void audio_callback(void *udata, uint8_t *buf, int len) {
-  process((float*) buf, len / sizeof(float));
+  process((float*) buf, len / sizeof(float));  
+  SDL_LockMutex(stream_lock);
   if (stream_fp) { fwrite(buf, len, 1, stream_fp); }
+  SDL_UnlockMutex(stream_lock);
 }
 
 
 void dsp_init(DspTickFn tickfn) {
   tick_callback = tickfn;
   lock = SDL_CreateMutex();
+  stream_lock = SDL_CreateMutex();
   SDL_AudioSpec fmt = {
     .freq = 44100,
     .format = AUDIO_F32,
@@ -159,7 +163,12 @@ void dsp_set_tick(double t) {
 
 
 int dsp_set_stream(const char *filename) {
-  if (stream_fp) { fclose(stream_fp); }
+  if (stream_fp) {
+    SDL_LockMutex(stream_lock);
+    fclose(stream_fp);
+    stream_fp = NULL;
+    SDL_UnlockMutex(stream_lock);
+  }
   if (filename) {
     stream_fp = fopen(filename, "wb");
     if (!stream_fp) { return -1; }
