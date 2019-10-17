@@ -386,6 +386,14 @@
       (render-master-reverb)
       (ui:row '(-1) 20)
       (render-master)
+      (ui:row '(0 0 -1))
+      (when (ui:button "Load") (= seq (read "save")))
+      (when (ui:button "Save") (write "save" seq))
+      (when (ui:button (if recording "Recording..." "Record"))
+        (dsp:set-stream (unless recording "out.raw"))
+        (zap recording not)
+      )
+      (if recording (ui:highlight))
     )
     (ui:label "")
     (ui:column
@@ -404,9 +412,6 @@
     (if (ui:key-pressed k) (= selected-set i))
     (++ i)
   )
-
-  (when (ui:key-pressed "f5") (write "save" seq))
-  (when (ui:key-pressed "f9") (= seq (read "save")))
 
   (++ frame-count)
 )
