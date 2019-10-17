@@ -39,7 +39,7 @@ static fe_Object* f_set_tick(fe_Context *ctx, fe_Object *arg) {
 static fe_Object* f_set_stream(fe_Context *ctx, fe_Object *arg) {
   char str[256];
   char *filename;
-  if (!fe_isnil(ctx, arg)) {
+  if (!fe_isnil(ctx, fe_car(ctx, arg))) {
     fe_tostring(ctx, fe_nextarg(ctx, &arg), str, sizeof(str));
     filename = str;
   } else {
