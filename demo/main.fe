@@ -21,8 +21,12 @@
   (dsp:link reverb 'right dac 'right)
 
   (= delay (dsp:new 'delay))
+  (= delay-freq-lp (dsp:new 'svf))
+  (dsp:link delay-freq-lp 'out delay 'time)
   (dsp:link delay 'out dac 'left)
   (dsp:link delay 'out dac 'right)
+  (dsp:send delay-freq-lp "mode lowpass")
+  (dsp:set delay-freq-lp 'freq 2)
 
   (let delay-time 3)
   (let feedback 0.6)
@@ -42,7 +46,7 @@
     (ui:row '(-1) 12)
     (ui:label "")
     (dsp:set delay 'feedback feedback)
-    (dsp:set delay 'time (* (bpm-to-seconds bpm) delay-time))
+    (dsp:set delay-freq-lp 'in (* (bpm-to-seconds bpm) delay-time))
   )
 
   (let size  0.9)
@@ -266,24 +270,18 @@
 )
 
 
-(func render-pattern-set (id set)
+(func render-pattern-set (id set hotkeys)
   (ui:with-id (string "set" id)
     (let ptncdr (nthcdr (car set) set))
-    (ui:row '(6 18 268 14) 83)
-    ;; select
-    (when (ui:unlabeled-button "select")
-      (= selected-set id)
-    )
-    (if (is selected-set id) (ui:selected))
+    (ui:row '(18 268 14) 83)
     ;; pattern selectors
     (ui:column
       (ui:row '(-1) 18)
-      (for i (range (- (len set) 1))
-        (++ i)
-        (if (or (ui:button i) (and (is selected-set id) (ui:key-pressed i)))
-          (setcar set i)
-        )
+      (let i 1)
+      (for k hotkeys
+        (if (or (ui:button k) (ui:key-pressed k)) (setcar set i))
         (if (is (car set) i) (ui:selected))
+        (++ i)
       )
     )
     ;; pattern
@@ -337,6 +335,20 @@
 )
 
 
+(func number-select (label n)
+  (ui:row '(60 20 20 20 20 20 20 20 20))
+  (ui:label label)
+  (let res nil)
+  (ui:with-id label
+    (for i (range n)
+      (++ i)
+      (if (ui:button i) (= res i))
+    )
+  )
+  res
+)
+
+
 (func make-pattern-set (patterns steps)
   (cons 1 (map
     (fn () (map (fn () nil) (range steps)))
@@ -344,7 +356,6 @@
   ))
 )
 
-(= selected-set 0)
 (= copied-pattern nil)
 (= last-selected-note 60)
 (= selected-step (cons 60 nil))
@@ -360,16 +371,19 @@
 (= voice6 (make-drum "Drum4"))
 
 (zap outputs rev)
-(dsp:set-tick 0.12)
+
+(= pattern-hotkeys '((1 Q A Z) (2 W S X) (3 E D C) (4 R F V) (5 T G B) (6 Y H N)))
 
 (func on-frame ()
-  (ui:row '(318 16 0))
+  (ui:row '(308 18 0))
 
   (ui:column
     (let i 0)
+    (let hk pattern-hotkeys)
     (for set seq
-      (render-pattern-set i set)
+      (render-pattern-set i set (car hk))
       (++ i)
+      (zap hk cdr)
     )
     (ui:row '(-1))
     (render-note-select)
@@ -377,7 +391,7 @@
   (ui:label "")
 
   (ui:column
-    (ui:row '(268 16 268))
+    (ui:row '(268 18 268))
     (ui:column
       (ui:row '(-1))
       (voice1 'render)
@@ -386,14 +400,32 @@
       (render-master-reverb)
       (ui:row '(-1) 20)
       (render-master)
-      (ui:row '(0 0 -1))
-      (when (ui:button "Load") (= seq (read "save")))
-      (when (ui:button "Save") (write "save" seq))
-      (when (ui:button (if recording "Recording..." "Record"))
-        (dsp:set-stream (unless recording "out.raw"))
-        (zap recording not)
+      (if
+        loading (do
+          (let n (number-select "Load..." 8))
+          (when n
+            (= seq (or (read (string "save" n)) seq))
+            (= loading nil)
+          )
+        )
+        saving (do
+          (let n (number-select "Save..." 8))
+          (when n
+            (write (string "save" n) seq)
+            (= saving nil)
+          )
+        )
+        (do
+          (ui:row '(0 0 -1))
+          (when (ui:button "Load") (= loading t))
+          (when (ui:button "Save") (= saving  t))
+          (when (ui:button (if recording "Recording..." "Record"))
+            (dsp:set-stream (unless recording "out.raw"))
+            (zap recording not)
+          )
+          (if recording (ui:highlight))
+        )
       )
-      (if recording (ui:highlight))
     )
     (ui:label "")
     (ui:column
@@ -405,12 +437,6 @@
       (ui:row '(87 87 -1) 54)
       (for output outputs (ui:scope output 'out))
     )
-  )
-
-  (let i 0)
-  (for k '(q w e r t y)
-    (if (ui:key-pressed k) (= selected-set i))
-    (++ i)
   )
 
   (++ frame-count)
