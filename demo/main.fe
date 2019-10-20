@@ -264,8 +264,6 @@
       (zap x cdr)
       (++ i)
     )
-    (ui:row '(-1) 12)
-    (ui:label "")
   )
 )
 
@@ -273,35 +271,63 @@
 (func render-pattern-set (id set hotkeys)
   (ui:with-id (string "set" id)
     (let ptncdr (nthcdr (car set) set))
-    (ui:row '(18 268 14) 83)
+    (let ptn (car ptncdr))
+    (ui:row '(18 268 14 14) 83)
     ;; pattern selectors
     (ui:column
-      (ui:row '(-1) 18)
-      (let i 1)
-      (for k hotkeys
-        (if (or (ui:button k) (ui:key-pressed k)) (setcar set i))
-        (if (is (car set) i) (ui:selected))
-        (++ i)
+      (ui:with-id "Pattern Selectors"
+        (ui:row '(-1) 18)
+        (let i 1)
+        (for k hotkeys
+          (if (or (ui:button k) (ui:key-pressed k)) (setcar set i))
+          (if (is (car set) i) (ui:selected))
+          (++ i)
+        )
       )
     )
     ;; pattern
     (ui:column
-      (render-pattern id (car ptncdr))
+      (render-pattern id ptn)
+    )
+    ;; shrink / grow
+    (ui:column
+      (ui:row '(-1) 40)
+      (when (and (ui:button "+") (< (len ptn) 16))
+        (grow-pattern ptn)
+      )
+      (when (and (ui:button "-") (< 1 (len ptn)))
+        (shrink-pattern ptn)
+      )
     )
     ;; copy / paste / clear
     (ui:column
       (ui:row '(-1) 25)
       (when (ui:button "C") ; copy
-        (= copied-pattern (concat (car ptncdr)))
+        (= copied-pattern (concat ptn))
       )
       (when (and (ui:button "P") copied-pattern) ; paste
         (setcar ptncdr (concat copied-pattern))
       )
       (when (ui:button "X") ; clear
-        (setcar ptncdr (map (fn ()) (car ptncdr)))
+        (setcar ptncdr (map (fn ()) ptn))
       )
     )
+    ; spacing
+    (ui:row '(-1) 12)
+    (ui:label "")
   )
+)
+
+
+(func grow-pattern (ptn)
+  (while (cdr ptn) (zap ptn cdr))
+  (setcdr ptn (cons nil nil))
+)
+
+
+(func shrink-pattern (ptn)
+  (while (cdr (cdr ptn)) (zap ptn cdr))
+  (setcdr ptn nil)
 )
 
 
@@ -360,7 +386,7 @@
   ))
 )
 
-(= copied-pattern nil)
+
 (= last-selected-note 60)
 (= selected-step (cons 60 nil))
 (= tick-count 0)
@@ -375,11 +401,10 @@
 (= voice6 (make-drum "Drum4"))
 
 (zap outputs rev)
-
 (= pattern-hotkeys '((1 Q A Z) (2 W S X) (3 E D C) (4 R F V) (5 T G B) (6 Y H N)))
 
 (func on-frame ()
-  (ui:row '(308 18 0))
+  (ui:row '(326 18 0))
 
   (ui:column
     (let i 0)
