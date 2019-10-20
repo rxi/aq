@@ -1,7 +1,7 @@
 #include "../node.h"
 
-static const char *mode_strings[] = { "lowpass", "highpass", "bandpass", "notch", NULL };
-enum { LOWPASS, HIGHPASS, BANDPASS, NOTCH };
+static const char *mode_strings[] = { "lowpass", "highpass", "bandpass", "notch", "off", NULL };
+enum { LOWPASS, HIGHPASS, BANDPASS, NOTCH, OFF };
 
 typedef struct {
   Node node;
@@ -15,7 +15,7 @@ typedef struct {
 static void process(Node *node) {
   SvfNode *n = (SvfNode*) node;
   const float passes = 3;
-
+  
   float max_freq = NODE_SAMPLERATE * 0.130 * passes;
   float f1, q1, in, hp;
   float bp = n->d1;
@@ -38,6 +38,7 @@ static void process(Node *node) {
       case HIGHPASS : n->out.buf[i] = hp;      break;
       case BANDPASS : n->out.buf[i] = bp;      break;
       case NOTCH    : n->out.buf[i] = hp + lp; break;
+      case OFF      : n->out.buf[i] = in;      break;
     }
   }
 
