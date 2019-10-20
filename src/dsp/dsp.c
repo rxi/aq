@@ -23,6 +23,7 @@ Node* new_osc_node(void);
 Node* new_svf_node(void);
 Node* new_math_node(void);
 Node* new_line_node(void);
+Node* new_shaper_node(void);
 Node* new_delay_node(void);
 Node* new_reverb_node(void);
 
@@ -32,6 +33,7 @@ static struct { const char *name; NodeConstructor fn; } node_table[] = {
   { "svf",    new_svf_node    },
   { "math",   new_math_node   },
   { "line",   new_line_node   },
+  { "shaper", new_shaper_node },
   { "reverb", new_reverb_node },
   { "delay",  new_delay_node  },
   { },
@@ -133,7 +135,7 @@ static void process(float *buf, int len) {
 
 
 static void audio_callback(void *udata, uint8_t *buf, int len) {
-  process((float*) buf, len / sizeof(float));  
+  process((float*) buf, len / sizeof(float));
   SDL_LockMutex(stream_lock);
   if (stream_fp) { fwrite(buf, len, 1, stream_fp); }
   SDL_UnlockMutex(stream_lock);
