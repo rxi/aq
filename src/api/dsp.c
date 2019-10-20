@@ -31,6 +31,7 @@ static Node* get_node(fe_Context *ctx, int id) {
 
 static fe_Object* f_set_tick(fe_Context *ctx, fe_Object *arg) {
   float n = fe_tonumber(ctx, fe_nextarg(ctx, &arg));
+  if (n <= 0.0) { fe_error(ctx, "expected time greater than 0"); }
   dsp_set_tick(n);
   return fe_bool(ctx, false);
 }
