@@ -65,7 +65,6 @@ static int receive(Node *node, const char *msg, char *err) {
 }
 
 
-
 Node* new_svf_node(void) {
   SvfNode *node = calloc(1, sizeof(SvfNode));
 

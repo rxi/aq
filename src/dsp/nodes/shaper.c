@@ -52,7 +52,6 @@ static int receive(Node *node, const char *msg, char *err) {
 }
 
 
-
 Node* new_shaper_node(void) {
   ShaperNode *node = calloc(1, sizeof(ShaperNode));
 
