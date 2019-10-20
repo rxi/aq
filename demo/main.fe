@@ -342,7 +342,11 @@
   (ui:with-id label
     (for i (range n)
       (++ i)
-      (if (ui:button i) (= res i))
+      (when (ui:button i)
+        (= res i)
+        (= last-selected-number i)
+      )
+      (if (is last-selected-number i) (ui:highlight))
     )
   )
   res
