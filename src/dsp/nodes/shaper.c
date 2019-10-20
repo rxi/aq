@@ -20,7 +20,6 @@ typedef struct {
 #define softclip(in) (in / (1.0 + fabs(in)))
 #define hardclip(in) clampf(in, -1.0, 1.0)
 #define foldback(in) fabs(fabs(fmod(in - 1.0, 4.0)) - 2.0) - 1.0
-#define identity(in) in
 
 static void process(Node *node) {
   ShaperNode *n = (ShaperNode*) node;
@@ -30,7 +29,7 @@ static void process(Node *node) {
     case HARDCLIP : process_loop(hardclip); break;
     case FOLDBACK : process_loop(foldback); break;
     case SINE     : process_loop(sin);      break;
-    case OFF      : process_loop(identity); break;
+    case OFF      : memcpy(n->out.buf, n->in.buf, sizeof(n->out.buf)); break;
   }
 
   /* send output */
