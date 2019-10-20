@@ -313,7 +313,7 @@
       )
     )
     ; spacing
-    (ui:row '(-1) 12)
+    (ui:row '(-1) 10)
     (ui:label "")
   )
 )
