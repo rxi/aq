@@ -7,6 +7,8 @@
 void r_init(const char *title);
 void r_get_size(int *w, int *h);
 void r_set_size(int w, int h);
+void r_set_scale(int n);
+ int r_get_scale(void);
 void r_set_fullscreen(bool fullscreen);
 void r_draw_rect(mu_Rect rect, mu_Color color);
 void r_draw_text(const char *text, mu_Vec2 pos, mu_Color color);

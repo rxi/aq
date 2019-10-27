@@ -11,6 +11,7 @@ static GLfloat  vert_buf[BUFFER_SIZE *  8];
 static GLubyte color_buf[BUFFER_SIZE * 16];
 static GLuint  index_buf[BUFFER_SIZE *  6];
 
+static int scale  = 1.0;
 static int width  = 800;
 static int height = 600;
 static int buf_idx;
@@ -55,7 +56,7 @@ static void flush(void) {
   glMatrixMode(GL_PROJECTION);
   glPushMatrix();
   glLoadIdentity();
-  glOrtho(0.0f, width, height, 0.0f, -1.0f, +1.0f);
+  glOrtho(0.0f, width / scale, height / scale, 0.0f, -1.0f, +1.0f);
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
   glLoadIdentity();
@@ -124,13 +125,23 @@ static void push_quad(mu_Rect dst, mu_Rect src, mu_Color color) {
 
 
 void r_get_size(int *w, int *h) {
-  *w = width;
-  *h = height;
+  *w = width / scale;
+  *h = height / scale;
 }
 
 
 void r_set_size(int w, int h) {
-  SDL_SetWindowSize(window, w, h);
+  SDL_SetWindowSize(window, w * scale, h * scale);
+}
+
+
+void r_set_scale(int n) {
+  scale = n;
+}
+
+
+int r_get_scale(void) {
+  return scale;
 }
 
 

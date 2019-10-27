@@ -68,6 +68,13 @@ mu_Context* ui_init(const char *title) {
 }
 
 
+static void apply_renderer_scale(int *x, int *y) {
+  int scale = r_get_scale();
+  *x /= scale;
+  *y /= scale;
+}
+
+
 void ui_begin_frame(mu_Context *ctx) {
   /* reset key states */
   for (int i = 0; i < key_count; i++) {
@@ -80,13 +87,17 @@ void ui_begin_frame(mu_Context *ctx) {
   while (SDL_PollEvent(&e)) {
     switch (e.type) {
       case SDL_QUIT: exit(EXIT_SUCCESS); break;
-      case SDL_MOUSEMOTION: mu_input_mousemove(ctx, e.motion.x, e.motion.y); break;
+      case SDL_MOUSEMOTION:
+        apply_renderer_scale(&e.motion.x, &e.motion.y);
+        mu_input_mousemove(ctx, e.motion.x, e.motion.y);
+        break;
       case SDL_MOUSEWHEEL: mu_input_scroll(ctx, 0, e.wheel.y * -30); break;
       case SDL_TEXTINPUT: mu_input_text(ctx, e.text.text); break;
 
       case SDL_MOUSEBUTTONDOWN:
       case SDL_MOUSEBUTTONUP: {
         int b = button_map[e.button.button & 0xff];
+        apply_renderer_scale(&e.button.x, &e.button.y);
         if (b && e.type == SDL_MOUSEBUTTONDOWN) { mu_input_mousedown(ctx, e.button.x, e.button.y, b); }
         if (b && e.type ==   SDL_MOUSEBUTTONUP) { mu_input_mouseup(ctx, e.button.x, e.button.y, b);   }
       }

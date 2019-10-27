@@ -1,3 +1,4 @@
+#include "renderer.h"
 #include "dsp/dsp.h"
 #include "app.h"
 
@@ -13,6 +14,13 @@ static fe_Object* f_key_pressed(fe_Context *ctx, fe_Object *arg) {
   char name[32];
   fe_tostring(ctx, fe_nextarg(ctx, &arg), name, sizeof(name));
   return fe_bool(ctx, ui_key_pressed(name));
+}
+
+
+static fe_Object* f_set_scale(fe_Context *ctx, fe_Object *arg) {
+  int scale = fe_tonumber(ctx, fe_nextarg(ctx, &arg));
+  r_set_scale(scale);
+  return fe_bool(ctx, false);
 }
 
 
@@ -198,6 +206,7 @@ static fe_Object* f_scope(fe_Context *ctx, fe_Object *arg) {
 fex_Reg api_ui[] = {
   { "ui:key-down",      f_key_down      },
   { "ui:key-pressed",   f_key_pressed   },
+  { "ui:set-scale",     f_set_scale     },
   { "ui:set-color",     f_set_color     },
   { "ui:row",           f_row           },
   { "ui:begin-column",  f_begin_column  },
