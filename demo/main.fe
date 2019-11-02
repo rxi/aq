@@ -270,8 +270,8 @@
 
 (func render-pattern-set (id set hotkeys)
   (ui:with-id (string "set" id)
-    (let ptncdr (nthcdr (car set) set))
-    (let ptn (car ptncdr))
+    (let ptn-pair (nthcdr (car set) set))
+    (let ptn (car ptn-pair))
     (ui:row '(18 268 14 14) 83)
     ;; pattern selectors
     (ui:column
@@ -293,10 +293,10 @@
     (ui:column
       (ui:row '(-1) 40)
       (when (and (ui:button "+") (< (len ptn) 16))
-        (grow-pattern ptn)
+        (setcar ptn-pair (concat ptn (list nil)))
       )
       (when (and (ui:button "-") (< 1 (len ptn)))
-        (shrink-pattern ptn)
+        (setcar ptn-pair (take (- (len ptn) 1) ptn))
       )
     )
     ;; copy / paste / clear
@@ -306,28 +306,16 @@
         (= copied-pattern (concat ptn))
       )
       (when (and (ui:button "P") copied-pattern) ; paste
-        (setcar ptncdr (concat copied-pattern))
+        (setcar ptn-pair (concat copied-pattern))
       )
       (when (ui:button "X") ; clear
-        (setcar ptncdr (map (fn ()) ptn))
+        (setcar ptn-pair (map (fn ()) ptn))
       )
     )
     ; spacing
     (ui:row '(-1) 10)
     (ui:label "")
   )
-)
-
-
-(func grow-pattern (ptn)
-  (while (cdr ptn) (zap ptn cdr))
-  (setcdr ptn (cons nil nil))
-)
-
-
-(func shrink-pattern (ptn)
-  (while (cdr (cdr ptn)) (zap ptn cdr))
-  (setcdr ptn nil)
 )
 
 

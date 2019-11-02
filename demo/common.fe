@@ -218,7 +218,7 @@
     (zap lst cdr)
     (-- n)
   )
-  res
+  (rev res)
 )
 
 (func assoc (key lst)
