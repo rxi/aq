@@ -21,7 +21,7 @@ The project is a lightweight framework for creating small audio toys. The framew
   )
 )
 ```
-The demo program pictured in the screenshot at the top of this README file is provided in the `demo` folder. You can run the program on Linux by doing:
+The demo program pictured in the screenshot at the top of this README file is provided in the `demo` folder. You can run the program on Linux or MacOS by doing:
 ```bash
 ./aq demo
 ```
@@ -44,6 +44,11 @@ or, to cross-compile for windows:
 ./build.py release windows
 ```
 
+To build on MacOS, you'll need SDL2 (which you can install via Homebrew `brew install sdl2`) then you can build as normal via:
+```bash
+./build.py release
+```
+NOTE: Cross compiling does not work on MacOS, nor does MIDI.
 
 ## License
 This project is free software; you can redistribute it and/or modify it under
