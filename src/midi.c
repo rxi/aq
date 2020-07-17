@@ -155,3 +155,18 @@ static void midi_platform_send(MidiMessage msg) {
 }
 
 #endif
+
+
+#ifdef __APPLE__
+
+// TODO: Use CoreMIDI
+// https://stackoverflow.com/questions/47660597/using-osx-core-midi-in-a-c-project
+
+static void midi_platform_init(void) {
+}
+
+static void midi_platform_send(MidiMessage msg) {
+  send_message(msg);
+}
+
+#endif

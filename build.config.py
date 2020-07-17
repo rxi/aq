@@ -4,6 +4,11 @@ lflags   = [ "-lSDL2", "-lSDL2main", "-lGL", "-lm" ]
 cflags   = [ "-g", "-std=gnu11", "-Wall", "-Werror" ]
 output   = "aq"
 
+# compile on MacOS
+if platform == "Darwin":
+    lflags += [ "-L", "/System/Library/Frameworks/OpenGL.framework/Libraries/" ]
+
+# cross compile from Linux to Windows
 if "windows" in opt:
     compiler = "x86_64-w64-mingw32-gcc"
     output = "aq.exe"
