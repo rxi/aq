@@ -3,6 +3,7 @@
 
 A lightweight framework for creating audio toys
 
+![Build](https://github.com/jminor/aq/workflows/Build/badge.svg)
 
 ## Overview
 The project is a lightweight framework for creating small audio toys. The framework binds immediate mode ui, modularly routed audio nodes and midi input to the [fe](https://github.com/rxi/fe) scripting language. A small program that would output a sinewave and change its frequency when a button is clicked would be as follows:
