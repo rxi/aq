@@ -97,6 +97,10 @@
   (if (< n 0) (- 0 n) n)
 )
 
+(func max (n m)
+  (if (< n m) m n)
+)
+
 (func rev (lst)
   (let res nil)
   (while lst

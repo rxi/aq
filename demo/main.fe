@@ -70,7 +70,7 @@
     (ui:row '(40 -1))
     (ui:label "Master") (ui:meter (abs (dsp:get master 'out)))
     (ui:row '(46 -1))
-    (ui:label "bpm:") (= bpm (ui:number "bpm" bpm))
+    (ui:label "bpm:") (= bpm (max 1 (ui:number "bpm" bpm)))
     (ui:row '(-1) 8)
     (ui:label "")
     (dsp:set-tick (bpm-to-seconds bpm))
