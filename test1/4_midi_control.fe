@@ -1,0 +1,33 @@
+(do-file "demo/common.fe")
+(do-file "demo/dsp.fe")
+
+(ui:set-scale 2)
+
+; Initialize our audio nodes
+(= osc (dsp:new 'osc))
+(= amp (dsp:new 'math)) ; We use a math node for volume control
+(= dac (dsp:new 'dac))
+
+; Create the audio graph: osc -> amp -> dac
+(dsp:link osc 'out amp 'in)
+(dsp:link amp 'out dac 'left)
+(dsp:link amp 'out dac 'right)
+
+; Set initial amplitude to 0 (silent)
+(dsp:send amp "set 0")
+
+(func on-midi (msg)
+  ; Check if it's a 'note-on' message with velocity > 0
+  (if (and (is (car msg) 'note-on) (> (caddr msg) 0))
+    (let note (cadr msg))
+    ; Set oscillator frequency based on the MIDI note number
+    (dsp:set osc 'freq (mtof note))
+    ; Set amplitude to 1 (full volume)
+    (dsp:send amp "set 1")
+  )
+  ; Check if it's a 'note-off' message or 'note-on' with velocity 0
+  (if (or (is (car msg) 'note-off') (is (caddr msg) 0))
+    ; Set amplitude back to 0 (silence)
+    (dsp:send amp "set 0")
+  )
+)

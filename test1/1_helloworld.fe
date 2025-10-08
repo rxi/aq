@@ -1,0 +1,12 @@
+(do-file "common.fe")
+
+(ui:set-scale 2)
+
+(= counter 0)
+
+(func on-frame ()
+  (ui:label (string "Counter: " counter))
+  (when (ui:button "Increment")
+    (++ counter)
+  )
+)

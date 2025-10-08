@@ -1,0 +1,87 @@
+(do-file "../demo/common.fe")
+(do-file "../demo/dsp.fe")
+
+(ui:set-scale 2)
+
+(= MAX-VOICES 8)
+(= voices nil)
+(= mixer (dsp:new 'math))
+(= dac (dsp:new 'dac))
+
+; --- Keyboard Note Mapping ---
+(= key-map (alist
+  "z" 60 "s" 61 "x" 62 "d" 63 "c" 64 "v" 65 "g" 66
+  "b" 67 "h" 68 "n" 69 "j" 70 "m" 71 "," 72
+))
+(= active-notes nil)
+
+
+; --- Initialize Voices ---
+(= i 0)
+(while (< i MAX-VOICES)
+  (let voice (alist
+    'note -1
+    'osc (dsp:new 'osc)
+    'env (dsp:new 'line)
+    'amp (dsp:new 'math)
+  ))
+  (dsp:link (<< 'osc voice) 'out (<< 'amp voice) 'in)
+  (dsp:link (<< 'env voice) 'out (<< 'amp voice) 'in2)
+  (dsp:send (<< 'amp voice) "set in * in2")
+  (dsp:link (<< 'amp voice) 'out mixer 'in)
+  (push voice voices)
+  (++ i)
+)
+
+(dsp:send mixer (string "set in * " (/ 1.0 MAX-VOICES)))
+(dsp:link mixer 'out dac 'left)
+(dsp:link mixer 'out dac 'right)
+
+
+; --- Note Handling Logic ---
+(func find-voice (note)
+  (or (find (fn (v) (is (<< 'note v) note)) voices)
+      (find (fn (v) (is (<< 'note v) -1)) voices))
+)
+
+(func note-on (note vel)
+  (let voice (find-voice -1))
+  (when (and voice (not (has note active-notes)))
+    (>> 'note note voice)
+    (dsp:set (<< 'osc voice) 'freq (mtof note))
+    (dsp:send (<< 'env voice) "set 1.0 0.01")
+    (push note active-notes)
+  )
+)
+
+(func note-off (note)
+  (let voice (find-voice note))
+  (when voice
+    (>> 'note -1 voice)
+    (dsp:send (<< 'env voice) "set 0.0 0.5")
+    (= active-notes (reject (par is _ note) active-notes))
+  )
+)
+
+
+; --- Input Handlers ---
+(func on-midi (msg)
+  (let type (car msg) note (cadr msg) vel (caddr msg))
+  (when (and (is type 'note-on) (> vel 0)) (note-on note vel))
+  (when (or (is type 'note-off) (is vel 0)) (note-off note))
+)
+
+(func on-frame ()
+  ; Check each key in our map
+  (for pair key-map
+    (let key (car pair) note (cdr pair))
+    ; Key is pressed, but note isn't active yet? Trigger note-on
+    (when (and (ui:key-pressed key) (not (has note active-notes)))
+      (note-on note 100)
+    )
+    ; Key is not down, but note is active? Trigger note-off
+    (when (and (not (ui:key-down key)) (has note active-notes))
+      (note-off note)
+    )
+  )
+)

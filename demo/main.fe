@@ -2,6 +2,7 @@
 (do-file "ui.fe")
 (do-file "dsp.fe")
 
+(ui:set-scale 2)
 
 ;; master
 (do

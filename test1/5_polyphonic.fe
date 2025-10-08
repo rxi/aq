@@ -1,0 +1,66 @@
+(do-file "../demo/common.fe")
+(do-file "../demo/dsp.fe")
+
+(ui:set-scale 2)
+
+(= MAX-VOICES 8)
+(= voices nil)
+(= mixer (dsp:new 'math))
+(= dac (dsp:new 'dac))
+
+; --- Initialize Voices ---
+(= i 0)
+(while (< i MAX-VOICES)
+  (let voice (alist
+    'note -1
+    'osc (dsp:new 'osc)
+    'env (dsp:new 'line)
+    'amp (dsp:new 'math)
+  ))
+  ; For each voice: osc -> amp, env -> amp
+  (dsp:link (<< 'osc voice) 'out (<< 'amp voice) 'in)
+  (dsp:link (<< 'env voice) 'out (<< 'amp voice) 'in2)
+  ; Configure the amp to multiply the oscillator by the envelope
+  (dsp:send (<< 'amp voice) "set in * in2")
+
+  ; Link the voice's final output to the main mixer
+  (dsp:link (<< 'amp voice) 'out mixer 'in)
+
+  (push voice voices)
+  (++ i)
+)
+
+; Configure the main mixer to scale the final signal to prevent clipping
+(dsp:send mixer (string "set in * " (/ 1.0 MAX-VOICES)))
+(dsp:link mixer 'out dac 'left)
+(dsp:link mixer 'out dac 'right)
+
+
+; --- MIDI Handling ---
+(func find-voice (note)
+  (or (find (fn (v) (is (<< 'note v) note)) voices)
+      (find (fn (v) (is (<< 'note v) -1)) voices))
+)
+
+(func on-midi (msg)
+  (let type (car msg) note (cadr msg) vel (caddr msg))
+
+  ; Note On
+  (when (and (is type 'note-on) (> vel 0))
+    (let voice (find-voice -1))
+    (when voice
+      (>> 'note note voice)
+      (dsp:set (<< 'osc voice) 'freq (mtof note))
+      (dsp:send (<< 'env voice) "set 1.0 0.01")
+    )
+  )
+
+  ; Note Off
+  (when (or (is type 'note-off) (is vel 0))
+    (let voice (find-voice note))
+    (when voice
+      (>> 'note -1 voice)
+      (dsp:send (<< 'env voice) "set 0.0 0.5")
+    )
+  )
+)

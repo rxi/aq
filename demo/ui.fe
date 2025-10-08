@@ -47,5 +47,5 @@
 
 
 (func ui:selected ()
-  (if (< (mod frame-count 4) 2) (ui:highlight))
+  (if (< (mod frame-count 8) 2) (ui:highlight))
 )

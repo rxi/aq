@@ -1,0 +1,25 @@
+(do-file "common.fe")
+(do-file "ui.fe")
+
+(ui:set-scale 2)
+
+; Initialize our frequency variable
+(= frequency 440)
+
+; Initialize a sine wave oscillator and the audio output
+(= osc (dsp:new 'osc))
+(= dac (dsp:new 'dac))
+
+; Route the oscillator's output to the left and right speakers
+(dsp:link osc 'out dac 'left)
+(dsp:link osc 'out dac 'right)
+
+(func on-frame ()
+  (ui:label (string "Freq: " frequency))
+  ; Create a slider to control our 'frequency' variable
+  ; The slider will go from a minimum of 100 to a maximum of 1200
+  (ui:slider2 frequency 100 1200)
+
+  ; Continuously set the oscillator's frequency to the value of our variable
+  (dsp:set osc 'freq frequency)
+)

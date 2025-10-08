@@ -1,0 +1,22 @@
+(do-file "common.fe")
+
+(ui:set-scale 2)
+
+(= counter 0)
+
+; Initialize a sine wave oscillator and the audio output
+(= osc (dsp:new 'osc))
+(= dac (dsp:new 'dac))
+
+; Route the oscillator's output to the left and right speakers
+(dsp:link osc 'out dac 'left)
+(dsp:link osc 'out dac 'right)
+
+(func on-frame ()
+  (ui:label (string "Counter: " counter))
+  (when (ui:button "Increment")
+    (++ counter)
+    ; Set the oscillator's frequency to a random value between 200 and 1200 Hz
+    (dsp:set osc 'freq (+ 200 (rand 1000)))
+  )
+)
