@@ -34,6 +34,7 @@ static void midi_callback(MidiMessage msg) {
 
 
 void app_init(int argc, char **argv) {
+  const char *filename = (argc > 2) ? argv[2] : "main.fe";
   if (argc > 1) { expect( chdir(argv[1]) == 0 ); }
 
   SDL_Init(SDL_INIT_EVERYTHING);
@@ -75,7 +76,7 @@ void app_init(int argc, char **argv) {
 
   /* init scripts */
   app_fe_push();
-  app_do_file("main.fe");
+  app_do_file(filename);
   app_fe_pop();
 }
 
