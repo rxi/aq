@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2019 rxi
+** Copyright (c) 2020 rxi
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and associated documentation files (the "Software"), to
@@ -202,10 +202,10 @@ static int equal(fe_Object *a, fe_Object *b) {
   if (type(a) != type(b)) { return 0; }
   if (type(a) == FE_TNUMBER) { return number(a) == number(b); }
   if (type(a) == FE_TSTRING) {
-    for (; !isnil(a) && !isnil(b); a = cdr(a), b = cdr(b)) {
+    for (; !isnil(a); a = cdr(a), b = cdr(b)) {
       if (car(a) != car(b)) { return 0; }
     }
-    return isnil(a) && isnil(b);
+    return a == b;
   }
   return 0;
 }
@@ -617,11 +617,8 @@ static fe_Object* eval(fe_Context *ctx, fe_Object *obj, fe_Object *env, fe_Objec
   fe_Object cl, *va, *vb;
   int n, gc;
 
-  switch (type(obj)) {
-    case FE_TSYMBOL: return cdr(getbound(obj, env));
-    case FE_TPAIR: break;
-    default: return obj;
-  }
+  if (type(obj) == FE_TSYMBOL) { return cdr(getbound(obj, env)); }
+  if (type(obj) != FE_TPAIR) { return obj; }
 
   car(&cl) = obj, cdr(&cl) = ctx->calllist;
   ctx->calllist = &cl;
@@ -793,9 +790,6 @@ fe_Context* fe_open(void *ptr, int size) {
   memset(ctx, 0, sizeof(fe_Context));
   ptr = (char*) ptr + sizeof(fe_Context);
   size -= sizeof(fe_Context);
-
-  /* make sure object memory region is 32bit aligned */
-  while ((size_t) ptr & 0x3) { ptr = (char*) ptr + 1; size--; }
 
   /* init objects memory region */
   ctx->objects = (fe_Object*) ptr;

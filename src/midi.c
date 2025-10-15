@@ -24,6 +24,7 @@ static void send_message(MidiMessage msg) {
 }
 
 
+
 #ifdef __linux__
 
 #include <sys/select.h>
@@ -111,7 +112,9 @@ static void midi_platform_init(void) {
   for (int i = 1; i < MAX_MIDI_IN_OUTS; i++) {
     sprintf(filename, "/dev/midi%d", i);
     FILE *fp = fopen(filename, "wb");
-    if (fp) { midi_outputs[i - 1] = fp; }
+    if (fp) { 
+      midi_outputs[i - 1] = fp;
+    }
   }
   
   SDL_CreateThread(midi_thread, "Midi Input", NULL);
@@ -120,12 +123,22 @@ static void midi_platform_init(void) {
 
 static void midi_platform_send(MidiMessage msg) {
   int sz = sizes[midi_type(msg)];
-  for (int i = 0; midi_outputs[i]; i++) {
-    fwrite(&msg, sz, 1, midi_outputs[i]);
-    fflush(midi_outputs[i]);
+  for (int i = 0; i < MAX_MIDI_IN_OUTS; i++) {
+    if (midi_outputs[i]) {
+      fwrite(&msg, sz, 1, midi_outputs[i]);
+      fflush(midi_outputs[i]);
+    }
   }
 }
 
+void midi_platform_send_sysex(unsigned char *data, int len) {
+  for (int i = 0; i < MAX_MIDI_IN_OUTS; i++) {
+    if (midi_outputs[i]) {
+      fwrite(data, 1, len, midi_outputs[i]);
+      fflush(midi_outputs[i]);
+    }
+  }
+}
 #endif
 
 

@@ -4,6 +4,7 @@
 #include "fex.h"
 #include "app.h"
 
+#define MAX_SYSEX_LENGTH 256
 
 static fe_Object* f_exit(fe_Context *ctx, fe_Object *arg) {
   exit(EXIT_SUCCESS);
@@ -128,6 +129,43 @@ static fe_Object* f_send_midi(fe_Context *ctx, fe_Object *arg) {
   return fe_bool(ctx, false);
 }
 
+static fe_Object* f_send_sysex(fe_Context *ctx, fe_Object *arg) {
+  fe_Object *list;
+  unsigned char sysex_data[MAX_SYSEX_LENGTH];
+  int len = 0;
+
+  // Get the list from the arguments
+  list = fe_nextarg(ctx, &arg);
+  if (fe_type(ctx, list) != FE_TPAIR) {
+    fe_error(ctx, "expected a list of bytes");
+    return fe_bool(ctx, false);
+  }
+
+  // Iterate through the Fe list and populate our C byte array
+  while (list && fe_type(ctx, list) == FE_TPAIR) {
+    if (len >= MAX_SYSEX_LENGTH) {
+      fe_error(ctx, "sysex message exceeds max length");
+      return fe_bool(ctx, false);
+    }
+    fe_Object *car = fe_car(ctx, list);
+    int byte = fe_tonumber(ctx, car);
+
+    // Basic validation
+    if (byte < 0 || byte > 255) {
+        fe_error(ctx, "sysex byte value out of range (0-255)");
+        return fe_bool(ctx, false);
+    }
+
+    sysex_data[len++] = (unsigned char)byte;
+    list = fe_cdr(ctx, list);
+  }
+
+  // Send the message using the new platform function
+  midi_platform_send_sysex(sysex_data, len);
+
+  return fe_bool(ctx, true);
+}
+
 
 
 fex_Reg api_core[] = {
@@ -144,5 +182,6 @@ fex_Reg api_core[] = {
   { "write",     f_write     },
   { "do-file",   f_do_file   },
   { "send-midi", f_send_midi },
+  { "send-sysex", f_send_sysex },
   {},
 };

@@ -33,9 +33,6 @@ static void midi_callback(MidiMessage msg) {
 }
 
 
-static mu_Container console_win;
-
-
 void app_init(int argc, char **argv) {
   if (argc > 1) { expect( chdir(argv[1]) == 0 ); }
 
@@ -64,12 +61,6 @@ void app_init(int argc, char **argv) {
   app.mu_ctx->style->colors[MU_COLOR_SCROLLBASE  ] = mu_color(0, 0, 0, 0);
   app.mu_ctx->style->colors[MU_COLOR_SCROLLTHUMB ] = mu_color(255, 255, 255, 20);
 
-  /* init console window */
-  mu_init_window(app.mu_ctx, &console_win, 0);
-  console_win.rect = mu_rect(300, 40, 400, 230);
-  console_win.zindex = 0xffffff;
-  console_win.open = false;
-
   /* init `fe` */
   int bytes = 1024 * 256;
   app.fe_ctx = fe_open(malloc(bytes), bytes);
@@ -91,23 +82,24 @@ void app_init(int argc, char **argv) {
 
 
 static void console_window(mu_Context *ctx) {
+  mu_Container *win = mu_get_container(ctx, "Console");
   /* toggle console */
   bool just_opened_console = false;
   if (ui_key_pressed("escape")) {
-    console_win.open ^= true;
+    win->open ^= true;
     just_opened_console = true;
   }
 
-  if (mu_begin_window(ctx, &console_win, "Console")) {
+  if (mu_begin_window(ctx, "Console", mu_rect(300, 40, 400, 230))) {
     /* output text panel */
-    static mu_Container panel;
     mu_layout_row(ctx, 1, (int[]) { -1 }, -25);
-    mu_begin_panel(ctx, &panel);
+    mu_begin_panel(ctx, "Log");
+    mu_Container *panel = mu_get_current_container(ctx);
     mu_layout_row(ctx, 1, (int[]) { -1 }, -1);
     mu_text(ctx, app.log.buf);
     mu_end_panel(ctx);
     if (app.log.updated) {
-      panel.scroll.y = panel.content_size.y;
+      panel->scroll.y = panel->content_size.y;
       app.log.updated = false;
     }
 
@@ -141,27 +133,27 @@ static void console_window(mu_Context *ctx) {
 
 
 static void process_frame(mu_Context *ctx) {
-  static mu_Container win;
   const int opt = MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_AUTOSIZE;
 
-  if (mu_begin_window_ex(app.mu_ctx, &win, "Main", opt)) {
+  if (mu_begin_window_ex(app.mu_ctx, "Main", mu_rect(0, 0, 0, 0), opt)) {
     app_fe_push();
     app_do_string("(if on-frame (on-frame))");
     app_fe_pop();
     mu_end_window(app.mu_ctx);
   }
 
+  mu_Container *win = mu_get_container(ctx, "Main");
   int w, h;
   r_get_size(&w, &h);
 
   /* make window large enough to fit all content */
-  if (w < win.rect.w || h < win.rect.h) {
-    r_set_size(win.rect.w + 60, win.rect.h + 60);
+  if (w < win->rect.w || h < win->rect.h) {
+    r_set_size(win->rect.w + 60, win->rect.h + 60);
   }
 
   /* center content in window */
-  win.rect.x = (w - win.rect.w) / 2;
-  win.rect.y = (h - win.rect.h) / 2;
+  win->rect.x = (w - win->rect.w) / 2;
+  win->rect.y = (h - win->rect.h) / 2;
 
   console_window(ctx);
 
@@ -176,8 +168,13 @@ static void process_frame(mu_Context *ctx) {
 
 void app_run(void) {
   /* main loop */
+  static bool first = true;
   for (;;) {
     ui_begin_frame(app.mu_ctx);
+    if (first) {
+      mu_get_container(app.mu_ctx, "Console")->open = false;
+      first = false;
+    }
     process_frame(app.mu_ctx);
     ui_end_frame(app.mu_ctx);
   }
@@ -199,9 +196,9 @@ void app_log(const char *str) {
 
 
 void app_log_error(const char *str) {
-  console_win.open = true;
+  mu_Container *win = mu_get_container(app.mu_ctx, "Console");
+  win->open = true;
   app_log(str);
-
 }
 
 
